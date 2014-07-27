@@ -22,26 +22,40 @@ colnames(testdata)<-variables
 test2<-cbind(test1,testdata)
 
 training1<-cbind(trainingsubjects,traininglabels)
+#matches the labels to activity names and adds the names to the training set
 mtraining<-match(training1[,2],activitylabels[,1])
 training1$name<-activitylabels[mtraining,2]
+#rename columns
 colnames(trainingdata)<-variables
+#combines the training data with the subjects and labels
 training2<-cbind(training1,trainingdata)
 
 #combines everything into one data set
 alldata<-rbind(test2,training2)
+colnames(alldata)[1]<-"Subject"
+colnames(alldata)[2]<-"Activity"
 
 #extracting the mean and standard deviation columns
 std<-alldata[grep("std",colnames(alldata))]
 mean<-alldata[grep("mean",colnames(alldata))]
 
+
 #creates a dataset with just the subject, activity and standard deviation and mean for each measurement
-tidydata1<-cbind(alldata[,1],alldata[,3],std,mean)
-colnames(tidydata1)[1]<-"Subject"
-colnames(tidydata1)[2]<-"Activity"
+tidydata1<-cbind(alldata[,1:3],std,mean)
 
-#reshaping the data to find the mean for each subject, and creating the final file.
-meltdata<-melt(tidydata1,id.vars=c("Subject", "Activity"))
-subject_means<-ddply(meltdata,.(Subject,variable),summarize,mean=mean(value))
-meandata<-dcast(subject_means,Subject~variable,value.var="mean")
 
-write.table(meandata,file="tidy_data.txt")
+#reshaping the data to split by subject then by activity within subject, find the mean and add it to the final data frame.
+final_data<-subset(tidydata1[0,])
+x<-(1:30)
+for (i in x){
+        subject<-subset(tidydata1,Subject==i)
+        y<-(1:6)
+        for (i in y){
+                activity<-subset(subject,Activity==i)
+                means<-t(as.data.frame(colMeans(activity[4:82])))
+                means<-cbind(activity[1:3],means)
+                final_data<-rbind(final_data,means)
+        }
+}
+                
+write.table(final_data,file="tidy_data.txt")
